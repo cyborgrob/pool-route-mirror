@@ -1,0 +1,48 @@
+name: Fetch Pool Route Listings
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 11 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Download Eastern Florida listings
+        run: |
+          curl -L \
+            --fail \
+            --retry 5 \
+            --retry-delay 5 \
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vQsDILLGWp8p0Frq-2ORRctNG88Jfd02b4k4FB5Bc7evvOEXZAmywrLeBEb0CvvfYo8x-LClH8rYzAb/pub?gid=1263084729&single=true&output=csv" \
+            -o east-fl-listings.csv
+
+      - name: Verify download
+        run: |
+          echo "Downloaded file:"
+          ls -lh east-fl-listings.csv
+          echo ""
+          echo "First 10 lines:"
+          head -10 east-fl-listings.csv
+
+      - name: Commit updated CSV
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add east-fl-listings.csv
+
+          if git diff --cached --quiet; then
+            echo "No changes to listings."
+          else
+            git commit -m "Update Eastern Florida pool routes"
+            git push
+          fi
